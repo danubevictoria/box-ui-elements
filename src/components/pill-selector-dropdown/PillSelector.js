@@ -6,6 +6,7 @@ import uniqueId from 'lodash/uniqueId';
 import Tooltip from '../tooltip';
 import { KEYS } from '../../constants';
 
+import RoundPill from './RoundPill';
 import Pill from './Pill';
 import SuggestedPillsRow from './SuggestedPillsRow';
 import type { Option, OptionValue, SelectedOptions, SuggestedPillsFilter } from './flowTypes';
@@ -26,6 +27,10 @@ type Props = {
     onSuggestedPillAdd?: Function,
     placeholder: string,
     selectedOptions: SelectedOptions,
+    /** Whether to show avatars in pills (if rounded style is enabled) */
+    showAvatars?: boolean,
+    /** Whether to use rounded style for pills */
+    showRoundedPills?: boolean,
     suggestedPillsData?: Array<Object>,
     suggestedPillsFilter?: SuggestedPillsFilter,
     suggestedPillsTitle?: string,
@@ -45,6 +50,7 @@ class PillSelector extends React.Component<Props, State> {
         inputProps: {},
         placeholder: '',
         selectedOptions: [],
+        showRoundedPills: false,
         validator: () => true,
     };
 
@@ -168,6 +174,8 @@ class PillSelector extends React.Component<Props, State> {
             onSuggestedPillAdd,
             placeholder,
             selectedOptions,
+            showAvatars,
+            showRoundedPills,
             suggestedPillsData,
             suggestedPillsFilter,
             suggestedPillsTitle,
@@ -189,6 +197,8 @@ class PillSelector extends React.Component<Props, State> {
             'aria-errormessage': this.errorMessageID,
         };
 
+        const PillComponent = showRoundedPills ? RoundPill : Pill;
+
         return (
             <Tooltip isShown={hasError} text={error || ''} position="middle-right" theme="error">
                 {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
@@ -199,17 +209,28 @@ class PillSelector extends React.Component<Props, State> {
                     onFocus={this.handleFocus}
                     onKeyDown={this.handleKeyDown}
                 >
-                    {selectedOptions.map((option: Option, index: number) => (
-                        <Pill
-                            isValid={allowInvalidPills ? validator(option) : true}
-                            isDisabled={disabled}
-                            isSelected={index === selectedIndex}
-                            key={option.value}
-                            onRemove={onRemove.bind(this, option, index)}
-                            // $FlowFixMe option.text is for backwards compatibility
-                            text={option.displayText || option.text}
-                        />
-                    ))}
+                    {selectedOptions.map((option: Option, index: number) => {
+                        const pillProps = showAvatars
+                            ? {
+                                  showAvatar: true,
+                                  id: option.id,
+                                  hasWarning: option.hasWarning,
+                              }
+                            : {};
+                        return (
+                            <PillComponent
+                                isValid={allowInvalidPills ? validator(option) : true}
+                                isDisabled={disabled}
+                                isExternal={option.isExternalUser}
+                                isSelected={index === selectedIndex}
+                                key={option.value}
+                                onRemove={onRemove.bind(this, option, index)}
+                                // $FlowFixMe option.text is for backwards compatibility
+                                text={option.displayText || option.text}
+                                {...pillProps}
+                            />
+                        );
+                    })}
                     {/* hidden element for focus/key events during pill selection */}
                     <span
                         aria-hidden="true"
@@ -224,7 +245,9 @@ class PillSelector extends React.Component<Props, State> {
                         {...rest}
                         {...inputProps}
                         autoComplete="off"
-                        className={classNames('bdl-PillSelector-input', 'pill-selector-input', className)}
+                        className={classNames('bdl-PillSelector-input', 'pill-selector-input', className, {
+                            'bdl-PillSelector-input--showAvatars': showAvatars,
+                        })}
                         disabled={disabled}
                         onInput={onInput}
                         placeholder={this.getNumSelected() === 0 ? placeholder : ''}
